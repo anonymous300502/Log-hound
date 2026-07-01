@@ -1,0 +1,425 @@
+# SentinelGraph Detection Rules
+# Behavioral detection rules for threat hunting
+
+detection_rules:
+  # ====================================================================
+  # BRUTE FORCE ATTACKS
+  # ====================================================================
+  
+  - id: BF_01
+    name: "Brute Force - Excessive Failed Logons from Single IP"
+    type: threshold
+    severity: high
+    class: 3002
+    filter: "status == 'Failure'"
+    threshold: 15
+    window: 60
+    group_by: "src_endpoint.ip"
+    description: "Detected 15+ failed logon attempts from same IP in 60 seconds"
+    mitre_attack: "T1110 - Brute Force"
+  
+  - id: BF_02
+    name: "Brute Force - Failed Logons Across Multiple Accounts"
+    type: threshold
+    severity: high
+    class: 3002
+    filter: "status == 'Failure'"
+    threshold: 20
+    window: 300
+    group_by: "src_endpoint.ip"
+    description: "20+ failed logon attempts from single source in 5 minutes"
+    mitre_attack: "T1110.001 - Password Guessing"
+  
+  - id: BF_03
+    name: "Brute Force - Kerberos Pre-Auth Failures"
+    type: threshold
+    severity: medium
+    class: 3002
+    filter: "activity_id == 3 AND status == 'Failure'"
+    threshold: 10
+    window: 120
+    group_by: "user.name"
+    description: "Multiple Kerberos pre-authentication failures (possible AS-REP roasting)"
+    mitre_attack: "T1558.004 - AS-REP Roasting"
+  
+  # ====================================================================
+  # LATERAL MOVEMENT
+  # ====================================================================
+  
+  - id: LM_01
+    name: "Lateral Movement - Network Logon Followed by Process Execution"
+    type: chain
+    severity: critical
+    step_1:
+      class: 3002
+      filter: "auth_protocol == 'Network' AND status == 'Success'"
+    step_2:
+      class: 1007
+      filter: "process.name IN ['cmd.exe', 'powershell.exe', 'wmic.exe', 'psexec.exe']"
+    window: 30
+    match_on: "dst_endpoint.hostname"
+    description: "Network logon followed by suspicious process execution (lateral movement)"
+    mitre_attack: "T1021 - Remote Services"
+  
+  - id: LM_02
+    name: "Lateral Movement - RDP Logon with Suspicious Activity"
+    type: chain
+    severity: high
+    step_1:
+      class: 3002
+      filter: "auth_protocol == 'RemoteInteractive' AND status == 'Success'"
+    step_2:
+      class: 1007
+      filter: "process.cmd_line CONTAINS 'net user' OR process.cmd_line CONTAINS 'whoami'"
+    window: 60
+    match_on: "dst_endpoint.hostname"
+    description: "RDP logon followed by reconnaissance commands"
+    mitre_attack: "T1021.001 - Remote Desktop Protocol"
+  
+  - id: LM_03
+    name: "Lateral Movement - PSExec Service Installation"
+    type: atomic
+    severity: high
+    class: 1007
+    filter: "process.name == 'psexesvc.exe' OR process.cmd_line CONTAINS 'psexec'"
+    description: "PSExec service detected (common lateral movement tool)"
+    mitre_attack: "T1021.002 - SMB/Windows Admin Shares"
+  
+  - id: LM_04
+    name: "Lateral Movement - Excessive Share Access"
+    type: threshold
+    severity: medium
+    class: 4001
+    filter: "activity_id == 6"
+    threshold: 50
+    window: 300
+    group_by: "user.name"
+    description: "User accessed 50+ network shares in 5 minutes (share enumeration)"
+    mitre_attack: "T1135 - Network Share Discovery"
+  
+  # ====================================================================
+  # PRIVILEGE ESCALATION
+  # ====================================================================
+  
+  - id: PE_01
+    name: "Privilege Escalation - User Added to Admin Group"
+    type: atomic
+    severity: critical
+    class: 3006
+    filter: "activity_id == 2 AND group.name IN ['Administrators', 'Domain Admins', 'Enterprise Admins']"
+    description: "User added to privileged administrative group"
+    mitre_attack: "T1098 - Account Manipulation"
+  
+  - id: PE_02
+    name: "Privilege Escalation - New Local Admin Account Created"
+    type: chain
+    severity: critical
+    step_1:
+      class: 3006
+      filter: "activity_id == 1"
+    step_2:
+      class: 3006
+      filter: "activity_id == 2 AND group.name == 'Administrators'"
+    window: 120
+    match_on: "user.name"
+    description: "New account created and immediately added to Administrators"
+    mitre_attack: "T1136.001 - Create Local Account"
+  
+  - id: PE_03
+    name: "Privilege Escalation - Service Account Enabled"
+    type: atomic
+    severity: high
+    class: 3006
+    filter: "activity_id == 1 AND user.name CONTAINS 'svc_'"
+    description: "Service account created (potential persistence mechanism)"
+    mitre_attack: "T1136 - Create Account"
+  
+  # ====================================================================
+  # CREDENTIAL ACCESS
+  # ====================================================================
+  
+  - id: CA_01
+    name: "Credential Dumping - LSASS Access"
+    type: atomic
+    severity: critical
+    class: 1007
+    filter: "process.cmd_line CONTAINS 'lsass' OR process.name IN ['mimikatz.exe', 'procdump.exe']"
+    description: "Potential credential dumping detected (LSASS access)"
+    mitre_attack: "T1003.001 - LSASS Memory"
+  
+  - id: CA_02
+    name: "Credential Dumping - Kerberoasting Detection"
+    type: threshold
+    severity: high
+    class: 3002
+    filter: "activity_id == 3 AND encryption_type == '0x17'"
+    threshold: 10
+    window: 300
+    group_by: "user.name"
+    description: "Multiple service ticket requests with RC4 encryption (Kerberoasting)"
+    mitre_attack: "T1558.003 - Kerberoasting"
+  
+  - id: CA_03
+    name: "Credential Access - DCSync Attack"
+    type: atomic
+    severity: critical
+    class: 3002
+    filter: "process.cmd_line CONTAINS 'lsadump::dcsync' OR process.cmd_line CONTAINS 'DCSync'"
+    description: "DCSync attack detected (domain credential replication)"
+    mitre_attack: "T1003.006 - DCSync"
+  
+  - id: CA_04
+    name: "Credential Access - NTDS.dit Extraction"
+    type: atomic
+    severity: critical
+    class: 1007
+    filter: "process.cmd_line CONTAINS 'ntds.dit' OR process.cmd_line CONTAINS 'vssadmin create shadow'"
+    description: "Attempted NTDS.dit extraction (all domain credentials)"
+    mitre_attack: "T1003.003 - NTDS"
+  
+  # ====================================================================
+  # PERSISTENCE
+  # ====================================================================
+  
+  - id: PS_01
+    name: "Persistence - Scheduled Task Creation"
+    type: atomic
+    severity: medium
+    class: 1007
+    filter: "process.cmd_line CONTAINS 'schtasks /create' OR process.name == 'schtasks.exe'"
+    description: "Scheduled task created (potential persistence)"
+    mitre_attack: "T1053.005 - Scheduled Task"
+  
+  - id: PS_02
+    name: "Persistence - Service Creation"
+    type: atomic
+    severity: medium
+    class: 1007
+    filter: "process.cmd_line CONTAINS 'sc create' OR process.cmd_line CONTAINS 'New-Service'"
+    description: "Windows service created (potential persistence)"
+    mitre_attack: "T1543.003 - Windows Service"
+  
+  - id: PS_03
+    name: "Persistence - WMI Event Subscription"
+    type: atomic
+    severity: high
+    class: 1007
+    filter: "process.cmd_line CONTAINS 'ActiveScriptEventConsumer' OR process.cmd_line CONTAINS '__EventFilter'"
+    description: "WMI event subscription created (stealthy persistence)"
+    mitre_attack: "T1546.003 - WMI Event Subscription"
+  
+  - id: PS_04
+    name: "Persistence - Registry Run Key Modification"
+    type: atomic
+    severity: medium
+    class: 1007
+    filter: "process.cmd_line CONTAINS 'HKLM\\Software\\Microsoft\\Windows\\CurrentVersion\\Run'"
+    description: "Registry Run key modified (autostart persistence)"
+    mitre_attack: "T1547.001 - Registry Run Keys"
+  
+  # ====================================================================
+  # DEFENSE EVASION
+  # ====================================================================
+  
+  - id: DE_01
+    name: "Defense Evasion - Event Log Cleared"
+    type: atomic
+    severity: critical
+    class: 1007
+    filter: "process.cmd_line CONTAINS 'wevtutil cl' OR process.cmd_line CONTAINS 'Clear-EventLog'"
+    description: "Event logs cleared (anti-forensics)"
+    mitre_attack: "T1070.001 - Clear Windows Event Logs"
+  
+  - id: DE_02
+    name: "Defense Evasion - Suspicious Process Injection"
+    type: atomic
+    severity: high
+    class: 1007
+    filter: "process.cmd_line CONTAINS 'Invoke-ReflectivePEInjection' OR process.cmd_line CONTAINS 'CreateRemoteThread'"
+    description: "Process injection technique detected"
+    mitre_attack: "T1055 - Process Injection"
+  
+  - id: DE_03
+    name: "Defense Evasion - Disable Windows Defender"
+    type: atomic
+    severity: critical
+    class: 1007
+    filter: "process.cmd_line CONTAINS 'Set-MpPreference -DisableRealtimeMonitoring'"
+    description: "Windows Defender disabled"
+    mitre_attack: "T1562.001 - Disable Security Tools"
+  
+  # ====================================================================
+  # DISCOVERY
+  # ====================================================================
+  
+  - id: DS_01
+    name: "Discovery - Network Scanning Activity"
+    type: threshold
+    severity: medium
+    class: 4001
+    filter: "connection.direction == 'outbound'"
+    threshold: 100
+    window: 60
+    group_by: "src_endpoint.ip"
+    description: "100+ outbound connections in 60 seconds (port scanning)"
+    mitre_attack: "T1046 - Network Service Scanning"
+  
+  - id: DS_02
+    name: "Discovery - Domain Enumeration"
+    type: atomic
+    severity: low
+    class: 1007
+    filter: "process.cmd_line CONTAINS 'net group' OR process.cmd_line CONTAINS 'nltest /dclist'"
+    description: "Active Directory enumeration detected"
+    mitre_attack: "T1087.002 - Domain Account Discovery"
+  
+  - id: DS_03
+    name: "Discovery - System Information Gathering"
+    type: threshold
+    severity: low
+    class: 1007
+    filter: "process.name IN ['systeminfo.exe', 'whoami.exe', 'ipconfig.exe', 'netstat.exe']"
+    threshold: 5
+    window: 60
+    group_by: "user.name"
+    description: "Multiple reconnaissance commands executed"
+    mitre_attack: "T1082 - System Information Discovery"
+  
+  # ====================================================================
+  # EXECUTION
+  # ====================================================================
+  
+  - id: EX_01
+    name: "Execution - PowerShell with Encoded Command"
+    type: atomic
+    severity: high
+    class: 1007
+    filter: "process.cmd_line CONTAINS '-encodedcommand' OR process.cmd_line CONTAINS '-enc'"
+    description: "PowerShell executed with encoded command (obfuscation)"
+    mitre_attack: "T1059.001 - PowerShell"
+  
+  - id: EX_02
+    name: "Execution - Suspicious Script Execution"
+    type: atomic
+    severity: medium
+    class: 1007
+    filter: "process.name IN ['cscript.exe', 'wscript.exe', 'mshta.exe'] AND process.cmd_line CONTAINS 'http'"
+    description: "Script execution from remote location"
+    mitre_attack: "T1059 - Command and Scripting Interpreter"
+  
+  - id: EX_03
+    name: "Execution - Rundll32 Suspicious Usage"
+    type: atomic
+    severity: high
+    class: 1007
+    filter: "process.name == 'rundll32.exe' AND process.cmd_line CONTAINS 'javascript:'"
+    description: "Rundll32 used for script execution (LOLBin abuse)"
+    mitre_attack: "T1218.011 - Rundll32"
+  
+  - id: EX_04
+    name: "Execution - WMIC Remote Execution"
+    type: atomic
+    severity: high
+    class: 1007
+    filter: "process.cmd_line CONTAINS 'wmic' AND process.cmd_line CONTAINS '/node:'"
+    description: "WMIC used for remote command execution"
+    mitre_attack: "T1047 - Windows Management Instrumentation"
+  
+  # ====================================================================
+  # EXFILTRATION
+  # ====================================================================
+  
+  - id: EF_01
+    name: "Exfiltration - Large Data Transfer"
+    type: threshold
+    severity: high
+    class: 4001
+    filter: "connection.direction == 'outbound'"
+    threshold: 1000
+    window: 300
+    group_by: "user.name"
+    description: "1000+ outbound connections in 5 minutes (data exfiltration)"
+    mitre_attack: "T1041 - Exfiltration Over C2 Channel"
+  
+  - id: EF_02
+    name: "Exfiltration - Data Staging"
+    type: atomic
+    severity: medium
+    class: 1007
+    filter: "process.cmd_line CONTAINS 'compress' OR process.cmd_line CONTAINS '7z a'"
+    description: "Data compression detected (staging for exfiltration)"
+    mitre_attack: "T1560.001 - Archive via Utility"
+  
+  # ====================================================================
+  # ANOMALOUS BEHAVIOR
+  # ====================================================================
+  
+  - id: AB_01
+    name: "Anomaly - Off-Hours Admin Activity"
+    type: atomic
+    severity: medium
+    class: 3002
+    filter: "user.name IN ['Administrator', 'admin'] AND status == 'Success'"
+    description: "Administrative logon detected (monitor for off-hours)"
+    mitre_attack: "TA0001 - Initial Access"
+  
+  - id: AB_02
+    name: "Anomaly - Service Account Interactive Logon"
+    type: atomic
+    severity: high
+    class: 3002
+    filter: "user.name CONTAINS 'svc_' AND auth_protocol == 'Interactive'"
+    description: "Service account used for interactive logon (anomalous)"
+    mitre_attack: "T1078.002 - Domain Accounts"
+  
+  - id: AB_03
+    name: "Anomaly - Multiple Failed Then Successful Logon"
+    type: chain
+    severity: high
+    step_1:
+      class: 3002
+      filter: "status == 'Failure'"
+    step_2:
+      class: 3002
+      filter: "status == 'Success'"
+    window: 120
+    match_on: "user.name"
+    description: "Failed logon attempts followed by success (credential stuffing)"
+    mitre_attack: "T1110.003 - Password Spraying"
+  
+  - id: AB_04
+    name: "Anomaly - Account Logon from Multiple IPs"
+    type: threshold
+    severity: medium
+    class: 3002
+    filter: "status == 'Success'"
+    threshold: 5
+    window: 300
+    group_by: "user.name"
+    description: "Same account logged on from 5+ different IPs in 5 minutes"
+    mitre_attack: "T1078 - Valid Accounts"
+  
+  # ====================================================================
+  # IMPACT
+  # ====================================================================
+  
+  - id: IM_01
+    name: "Impact - Mass Account Deletion"
+    type: threshold
+    severity: critical
+    class: 3006
+    filter: "activity_name == 'Delete'"
+    threshold: 10
+    window: 60
+    group_by: "actor.user.name"
+    description: "10+ accounts deleted in 60 seconds (destructive activity)"
+    mitre_attack: "T1531 - Account Access Removal"
+  
+  - id: IM_02
+    name: "Impact - Ransomware Indicators"
+    type: atomic
+    severity: critical
+    class: 1007
+    filter: "process.cmd_line CONTAINS 'vssadmin delete shadows' OR process.cmd_line CONTAINS 'wbadmin delete catalog'"
+    description: "Shadow copies deleted (ransomware preparation)"
+    mitre_attack: "T1490 - Inhibit System Recovery"

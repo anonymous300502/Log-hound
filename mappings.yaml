@@ -1,0 +1,310 @@
+# SentinelGraph OCSF v1.1.0 Event Mappings
+# Maps Windows Event IDs to OCSF schema
+
+event_mapping:
+  # ====================================================================
+  # AUTHENTICATION EVENTS (Class 3002)
+  # ====================================================================
+  
+  # Event 4624: Successful Logon
+  "4624":
+    ocsf_class: 3002
+    description: "Account logon - successful"
+    mapping:
+      TargetUserName: user.name
+      TargetDomainName: user.domain
+      TargetUserSid: user.uid
+      SubjectUserName: actor.user.name
+      SubjectDomainName: actor.user.domain
+      IpAddress: src_endpoint.ip
+      WorkstationName: src_endpoint.hostname
+      LogonType: logon_type
+      LogonProcessName: logon_process
+      AuthenticationPackageName: auth_protocol
+      Computer: dst_endpoint.hostname
+      IpPort: src_endpoint.port
+  
+  # Event 4625: Failed Logon
+  "4625":
+    ocsf_class: 3002
+    description: "Account logon - failed"
+    mapping:
+      TargetUserName: user.name
+      TargetDomainName: user.domain
+      SubjectUserName: actor.user.name
+      SubjectDomainName: actor.user.domain
+      IpAddress: src_endpoint.ip
+      WorkstationName: src_endpoint.hostname
+      LogonType: logon_type
+      FailureReason: status_detail
+      Status: status_code
+      SubStatus: sub_status_code
+      Computer: dst_endpoint.hostname
+  
+  # Event 4768: Kerberos TGT Request
+  "4768":
+    ocsf_class: 3002
+    description: "Kerberos authentication ticket (TGT) requested"
+    mapping:
+      TargetUserName: user.name
+      TargetDomainName: user.domain
+      IpAddress: src_endpoint.ip
+      IpPort: src_endpoint.port
+      ServiceName: service.name
+      TicketOptions: ticket_options
+      Status: status_code
+      TicketEncryptionType: encryption_type
+      PreAuthType: pre_auth_type
+  
+  # Event 4769: Kerberos Service Ticket Request
+  "4769":
+    ocsf_class: 3002
+    description: "Kerberos service ticket requested"
+    mapping:
+      TargetUserName: user.name
+      TargetDomainName: user.domain
+      ServiceName: service.name
+      ServiceSid: service.uid
+      IpAddress: src_endpoint.ip
+      IpPort: src_endpoint.port
+      TicketOptions: ticket_options
+      TicketEncryptionType: encryption_type
+      TransmittedServices: transmitted_services
+  
+  # Event 4776: Domain Controller Authentication
+  "4776":
+    ocsf_class: 3002
+    description: "Domain controller attempted to validate credentials"
+    mapping:
+      TargetUserName: user.name
+      Workstation: src_endpoint.hostname
+      Status: status_code
+  
+  # Event 4648: Logon with Explicit Credentials
+  "4648":
+    ocsf_class: 3002
+    description: "Logon attempted using explicit credentials"
+    mapping:
+      SubjectUserName: actor.user.name
+      SubjectDomainName: actor.user.domain
+      TargetUserName: user.name
+      TargetDomainName: user.domain
+      TargetServerName: dst_endpoint.hostname
+      ProcessName: process.name
+      ProcessId: process.pid
+      IpAddress: dst_endpoint.ip
+  
+  # ====================================================================
+  # PROCESS ACTIVITY EVENTS (Class 1007)
+  # ====================================================================
+  
+  # Event 4688: Process Creation
+  "4688":
+    ocsf_class: 1007
+    description: "New process created"
+    mapping:
+      NewProcessName: process.name
+      NewProcessId: process.pid
+      CommandLine: process.cmd_line
+      SubjectUserName: user.name
+      SubjectDomainName: user.domain
+      SubjectLogonId: session.uid
+      TokenElevationType: process.elevation_type
+      ParentProcessName: parent_process.name
+      CreatorProcessId: parent_process.pid
+      MandatoryLabel: process.integrity_level
+      Computer: host.hostname
+  
+  # Event 4689: Process Termination
+  "4689":
+    ocsf_class: 1007
+    description: "Process terminated"
+    mapping:
+      ProcessName: process.name
+      ProcessId: process.pid
+      SubjectUserName: user.name
+      SubjectDomainName: user.domain
+      Status: status_code
+      Computer: host.hostname
+  
+  # ====================================================================
+  # ACCOUNT MANAGEMENT EVENTS (Class 3006)
+  # ====================================================================
+  
+  # Event 4720: User Account Created
+  "4720":
+    ocsf_class: 3006
+    description: "User account created"
+    mapping:
+      TargetUserName: user.name
+      TargetDomainName: user.domain
+      TargetSid: user.uid
+      SubjectUserName: actor.user.name
+      SubjectDomainName: actor.user.domain
+      SamAccountName: user.account_name
+      DisplayName: user.full_name
+      UserPrincipalName: user.email_addr
+      HomeDirectory: user.home_dir
+      HomePath: user.home_path
+      Computer: host.hostname
+  
+  # Event 4722: User Account Enabled
+  "4722":
+    ocsf_class: 3006
+    description: "User account enabled"
+    mapping:
+      TargetUserName: user.name
+      TargetDomainName: user.domain
+      TargetSid: user.uid
+      SubjectUserName: actor.user.name
+      SubjectDomainName: actor.user.domain
+      Computer: host.hostname
+  
+  # Event 4723: Password Change Attempt
+  "4723":
+    ocsf_class: 3006
+    description: "Attempt to change account password"
+    mapping:
+      TargetUserName: user.name
+      TargetDomainName: user.domain
+      SubjectUserName: actor.user.name
+      SubjectDomainName: actor.user.domain
+      Computer: host.hostname
+  
+  # Event 4724: Password Reset Attempt
+  "4724":
+    ocsf_class: 3006
+    description: "Attempt to reset account password"
+    mapping:
+      TargetUserName: user.name
+      TargetDomainName: user.domain
+      SubjectUserName: actor.user.name
+      SubjectDomainName: actor.user.domain
+      Computer: host.hostname
+  
+  # Event 4725: User Account Disabled
+  "4725":
+    ocsf_class: 3006
+    description: "User account disabled"
+    mapping:
+      TargetUserName: user.name
+      TargetDomainName: user.domain
+      TargetSid: user.uid
+      SubjectUserName: actor.user.name
+      SubjectDomainName: actor.user.domain
+      Computer: host.hostname
+  
+  # Event 4726: User Account Deleted
+  "4726":
+    ocsf_class: 3006
+    description: "User account deleted"
+    mapping:
+      TargetUserName: user.name
+      TargetDomainName: user.domain
+      TargetSid: user.uid
+      SubjectUserName: actor.user.name
+      SubjectDomainName: actor.user.domain
+      Computer: host.hostname
+  
+  # Event 4732: Member Added to Security-Enabled Local Group
+  "4732":
+    ocsf_class: 3006
+    description: "Member added to security-enabled local group"
+    mapping:
+      MemberName: user.name
+      MemberSid: user.uid
+      TargetUserName: group.name
+      TargetDomainName: group.domain
+      TargetSid: group.uid
+      SubjectUserName: actor.user.name
+      SubjectDomainName: actor.user.domain
+      Computer: host.hostname
+  
+  # Event 4733: Member Removed from Security-Enabled Local Group
+  "4733":
+    ocsf_class: 3006
+    description: "Member removed from security-enabled local group"
+    mapping:
+      MemberName: user.name
+      MemberSid: user.uid
+      TargetUserName: group.name
+      TargetDomainName: group.domain
+      TargetSid: group.uid
+      SubjectUserName: actor.user.name
+      SubjectDomainName: actor.user.domain
+      Computer: host.hostname
+  
+  # Event 4738: User Account Changed
+  "4738":
+    ocsf_class: 3006
+    description: "User account changed"
+    mapping:
+      TargetUserName: user.name
+      TargetDomainName: user.domain
+      TargetSid: user.uid
+      SubjectUserName: actor.user.name
+      SubjectDomainName: actor.user.domain
+      SamAccountName: user.account_name
+      DisplayName: user.full_name
+      UserPrincipalName: user.email_addr
+      Computer: host.hostname
+  
+  # Event 4756: Member Added to Security-Enabled Universal Group
+  "4756":
+    ocsf_class: 3006
+    description: "Member added to security-enabled universal group"
+    mapping:
+      MemberName: user.name
+      MemberSid: user.uid
+      TargetUserName: group.name
+      TargetDomainName: group.domain
+      SubjectUserName: actor.user.name
+      SubjectDomainName: actor.user.domain
+      Computer: host.hostname
+  
+  # ====================================================================
+  # NETWORK ACTIVITY EVENTS (Class 4001)
+  # ====================================================================
+  
+  # Event 5140: Network Share Object Accessed
+  "5140":
+    ocsf_class: 4001
+    description: "Network share object accessed"
+    mapping:
+      SubjectUserName: user.name
+      SubjectDomainName: user.domain
+      IpAddress: src_endpoint.ip
+      IpPort: src_endpoint.port
+      ShareName: share.name
+      ShareLocalPath: share.path
+      ObjectType: resource.type
+      Computer: dst_endpoint.hostname
+      AccessMask: access_mask
+  
+  # Event 5145: Network Share Object Checked
+  "5145":
+    ocsf_class: 4001
+    description: "Network share object checked for access"
+    mapping:
+      SubjectUserName: user.name
+      SubjectDomainName: user.domain
+      IpAddress: src_endpoint.ip
+      ShareName: share.name
+      ShareLocalPath: share.path
+      RelativeTargetName: file.name
+      AccessMask: access_mask
+      Computer: dst_endpoint.hostname
+  
+  # Event 5156: Windows Filtering Platform Connection
+  "5156":
+    ocsf_class: 4001
+    description: "Windows Filtering Platform allowed connection"
+    mapping:
+      Application: process.name
+      SourceAddress: src_endpoint.ip
+      SourcePort: src_endpoint.port
+      DestAddress: dst_endpoint.ip
+      DestPort: dst_endpoint.port
+      Protocol: connection.protocol_num
+      Direction: connection.direction
+      Computer: host.hostname
