@@ -1,0 +1,6 @@
+OPLC-acme,1782858001000,10.0.0.10 #3.4.8,1782858001,HOST-A,10.0.0.10,P,NEW_PROCESS,1000,explorer.exe,C:\Windows\explorer.exe,C:\Windows,CORP\attacker,4,winlogon.exe
+OPLC-acme,1782858002000,10.0.0.10 #3.4.8,1782858002,HOST-A,10.0.0.10,P,NEW_PROCESS,1100,powershell.exe,C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe,C:\Windows\System32\WindowsPowerShell\v1.0,CORP\attacker,1000,explorer.exe
+OPLC-acme,1782858003000,10.0.0.10 #1782858003,HOST-A,10.0.0.10,N,NETWORK,TCP,10.0.0.10,50000,199.9.9.9,443,1100,powershell.exe
+OPLC-acme,1782858004000,10.0.0.20 #1782858004,HOST-B,10.0.0.20,E,<Event xmlns='http://schemas.microsoft.com/win/2004/08/events/event'><System><EventID>4624</EventID><TimeCreated SystemTime='2026-06-30T22:20:04.000Z'/><Computer>HOST-B</Computer></System><EventData><Data Name='TargetUserName'>attacker</Data><Data Name='TargetDomainName'>CORP</Data><Data Name='IpAddress'>10.0.0.10</Data><Data Name='LogonType'>3</Data></EventData></Event>
+OPLC-acme,1782858005000,10.0.0.20 #3.4.8,1782858005,HOST-B,10.0.0.20,P,NEW_PROCESS,2000,cmd.exe
+OPLC-acme,1782858006000,10.0.0.20 #1782858006,HOST-B,10.0.0.20,I,FILE_INTEGRITY,,CREATED,C:\Temp\payload.dll,deadbeefdeadbeefdeadbeefdeadbeef

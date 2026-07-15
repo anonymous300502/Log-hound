@@ -1,0 +1,45 @@
+# LogHound — Temporal Knowledge-Graph Investigation Platform (Rust core)
+# See PLAN.md for the full architecture and milestone roadmap.
+[workspace]
+resolver = "2"
+members = [
+    "crates/loghound-core",
+    "crates/loghound-normalize",
+    "crates/loghound-detect",
+    "crates/loghound-parsers",
+    "crates/loghound-graph",
+    "crates/loghound-correlate",
+    "crates/loghound-api",
+    "crates/loghound-cli",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT"
+authors = ["LogHound contributors"]
+repository = "https://github.com/anonymous300502/Log-hound"
+rust-version = "1.85"
+
+[workspace.dependencies]
+# Internal crates
+loghound-core = { path = "crates/loghound-core" }
+loghound-normalize = { path = "crates/loghound-normalize" }
+loghound-detect = { path = "crates/loghound-detect" }
+loghound-parsers = { path = "crates/loghound-parsers" }
+loghound-graph = { path = "crates/loghound-graph" }
+loghound-correlate = { path = "crates/loghound-correlate" }
+loghound-api = { path = "crates/loghound-api" }
+
+# Third-party (pure-Rust unless noted)
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9" # NOTE: maintenance mode (PLAN.md §17 risk 4); pinned, swap to saphyr later if needed
+xxhash-rust = { version = "0.8", features = ["xxh64"] }
+thiserror = "2"
+anyhow = "1"
+regex = "1"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1

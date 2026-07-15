@@ -1,0 +1,31 @@
+# Rust
+/target
+**/*.rs.bk
+Cargo.lock.orig
+
+# LogHound data artifacts (databases, generated sample corpora)
+*.duckdb
+*.duckdb.wal
+*.parquet
+/*.log
+/data
+/scratch
+
+# Local notes / personal development files
+/PLAN.md
+/sample logs
+
+# Frontend
+node_modules/
+frontend/dist/
+
+# Editor / OS / tooling
+.DS_Store
+.idea/
+.vscode/
+.claude/
+*.swp
+
+# Python
+__pycache__/
+*.pyc

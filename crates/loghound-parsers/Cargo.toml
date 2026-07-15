@@ -1,0 +1,15 @@
+[package]
+name = "loghound-parsers"
+description = "Pluggable streaming parsers for the OPLC SIEM envelope (Windows XML, network, process, file-integrity)."
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[dependencies]
+loghound-core.workspace = true
+thiserror.workspace = true
+quick-xml = "0.36"
+chrono = "0.4"
