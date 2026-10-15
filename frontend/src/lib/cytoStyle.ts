@@ -105,34 +105,36 @@ export function buildStylesheet(): Sheet[] {
   return [...base, ...perKind] as unknown as Sheet[];
 }
 
-export function layoutFor(name: string): cytoscape.LayoutOptions {
+export function layoutFor(name: string, nodeCount = 0): cytoscape.LayoutOptions {
   if (name === "breadthfirst") {
     return {
       name: "breadthfirst",
       directed: true,
       spacingFactor: 1.1,
-      animate: true,
-      animationDuration: 300,
+      animate: nodeCount < 50,
+      animationDuration: 200,
       padding: 30,
     } as cytoscape.LayoutOptions;
   }
   if (name === "concentric") {
     return {
       name: "concentric",
-      animate: true,
-      animationDuration: 300,
+      animate: nodeCount < 50,
+      animationDuration: 200,
       minNodeSpacing: 30,
       padding: 30,
     } as cytoscape.LayoutOptions;
   }
   return {
     name: "cose",
-    animate: true,
-    animationDuration: 400,
-    nodeRepulsion: () => 12000,
-    idealEdgeLength: () => 90,
-    nodeDimensionsIncludeLabels: true,
+    animate: nodeCount < 50,
+    animationDuration: 200,
+    nodeRepulsion: () => 4500,
+    idealEdgeLength: () => 60,
+    nodeDimensionsIncludeLabels: false,
     padding: 30,
     randomize: false,
+    numIter: nodeCount > 200 ? 70 : 150,
+    refresh: 20,
   } as cytoscape.LayoutOptions;
 }

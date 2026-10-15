@@ -4,6 +4,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { useAppStore } from "../store/useAppStore";
+import { AlertTriangleIcon, LogHoundLogo } from "./Icons";
 
 interface Props {
   layoutName: string;
@@ -25,25 +26,34 @@ export default function Toolbar({ layoutName, onLayout, onFit }: Props) {
   return (
     <header className="toolbar">
       <div className="brand">
-        <span className="brand-mark">🐾</span>
-        <span className="brand-name">LogHound</span>
-        <span className="brand-sub">temporal investigation graph</span>
+        <span className="brand-badge">
+          <LogHoundLogo className="brand-icon" />
+        </span>
+        <div className="brand-text">
+          <span className="brand-name">LogHound</span>
+          <span className="brand-sub">Temporal Knowledge Graph</span>
+        </div>
       </div>
 
       <div className="toolbar-stats muted small">
+        <span className="status-indicator" title="Connected to DuckDB store">
+          <span className="status-dot live" />
+          <span className="status-text">ONLINE</span>
+        </span>
+        <span className="sep">|</span>
         {stats.data && (
           <>
-            <span>{stats.data.events.toLocaleString()} events</span>
-            <span>{stats.data.nodes.toLocaleString()} nodes</span>
-            <span>{stats.data.edges.toLocaleString()} edges</span>
+            <span className="stat-pill">{stats.data.events.toLocaleString()} events</span>
+            <span className="stat-pill">{stats.data.nodes.toLocaleString()} nodes</span>
+            <span className="stat-pill">{stats.data.edges.toLocaleString()} edges</span>
             {stats.data.alerts > 0 && (
-              <span className="alert-count">{stats.data.alerts.toLocaleString()} alerts</span>
+              <span className="alert-count-pill">{stats.data.alerts.toLocaleString()} alerts</span>
             )}
           </>
         )}
         <span className="sep">|</span>
-        <span>
-          showing {nodeCount} / {edgeCount}
+        <span className="canvas-count">
+          visible: {nodeCount} nodes / {edgeCount} edges
         </span>
       </div>
 
@@ -62,23 +72,23 @@ export default function Toolbar({ layoutName, onLayout, onFit }: Props) {
           layout
           <select value={layoutName} onChange={(e) => onLayout(e.target.value)}>
             <option value="cose">force</option>
-            <option value="breadthfirst">tree</option>
             <option value="concentric">concentric</option>
+            <option value="breadthfirst">tree</option>
           </select>
         </label>
-        <button className="btn" onClick={() => void loadOverview()} title="Load the highest-risk entities">
+        <button className="btn" onClick={() => void loadOverview()} title="Load highest-risk or initial pivot entity">
           Overview
         </button>
-        <button className="btn" onClick={onFit}>
+        <button className="btn" onClick={onFit} title="Center and fit graph in viewport">
           Fit
         </button>
-        <button className="btn" onClick={clear}>
+        <button className="btn" onClick={clear} title="Clear graph canvas">
           Clear
         </button>
-        {loading && <span className="spinner" title="loading" />}
+        {loading && <span className="spinner" title="loading graph telemetry" />}
         {error && (
-          <span className="error small" title={error}>
-            ⚠ error
+          <span className="error-pill small" title={error}>
+            <AlertTriangleIcon className="icon-inline" /> error
           </span>
         )}
       </div>

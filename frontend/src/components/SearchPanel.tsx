@@ -2,44 +2,109 @@
 // toggles) and a legend. Clicking a search result pivots the graph to that
 // entity (PLAN.md §11).
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { useAppStore } from "../store/useAppStore";
 import { useDebounce } from "../lib/useDebounce";
 import { KIND_STYLES, kindStyle } from "../lib/kinds";
 import type { EdgeType, NodeKind } from "../api/types";
+import { CloseIcon, SearchIcon } from "./Icons";
+
+const KIND_FILTERS: { id: string; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "host", label: "Hosts" },
+  { id: "user", label: "Users" },
+  { id: "process", label: "Processes" },
+  { id: "ip_address", label: "IPs" },
+];
 
 export default function SearchPanel() {
   const [q, setQ] = useState("");
-  const debounced = useDebounce(q, 250);
+  const [kindFilter, setKindFilter] = useState("all");
+  const inputRef = useRef<HTMLInputElement>(null);
+  const debounced = useDebounce(q, 200);
   const pivotTo = useAppStore((s) => s.pivotTo);
   const selectedId = useAppStore((s) => s.selectedId);
 
+  // Global '/' keyboard shortcut to focus search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "/" && document.activeElement !== inputRef.current) {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
   const search = useQuery({
-    queryKey: ["search", debounced],
-    queryFn: () => api.search(debounced, undefined, 50),
+    queryKey: ["search", debounced, kindFilter],
+    queryFn: () => api.search(debounced, kindFilter === "all" ? undefined : kindFilter, 50),
     enabled: debounced.trim().length >= 2,
   });
 
   return (
     <aside className="panel left-panel">
       <div className="panel-section">
-        <label className="field-label">Search entities</label>
-        <input
-          className="text-input"
-          placeholder="user, host, ip, process…"
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          autoFocus
-        />
+        <div className="search-header-row">
+          <label className="field-label">Search entities</label>
+          <span className="kbd-hint">/</span>
+        </div>
+
+        <div className="search-input-wrap">
+          <SearchIcon className="search-input-icon" />
+          <input
+            ref={inputRef}
+            className="text-input search-input"
+            placeholder="Search host, user, process, IP..."
+            value={q}
+            onChange={(e) => setQ(e.target.value)}
+            autoFocus
+          />
+          {q.length > 0 && (
+            <button
+              className="search-clear-btn"
+              onClick={() => {
+                setQ("");
+                inputRef.current?.focus();
+              }}
+              title="Clear search"
+            >
+              <CloseIcon className="icon-xs" />
+            </button>
+          )}
+        </div>
+
+        <div className="kind-filter-tabs">
+          {KIND_FILTERS.map((f) => (
+            <button
+              key={f.id}
+              className={`kind-tab ${kindFilter === f.id ? "active" : ""}`}
+              onClick={() => setKindFilter(f.id)}
+            >
+              {f.label}
+            </button>
+          ))}
+        </div>
+
         {debounced.trim().length >= 2 && (
           <div className="search-results">
-            {search.isFetching && <div className="muted small">searching…</div>}
-            {search.isError && <div className="error small">search failed</div>}
+            <div className="search-results-header">
+              {search.isFetching ? (
+                <span className="muted small">Searching...</span>
+              ) : search.isError ? (
+                <span className="error small">Search failed</span>
+              ) : search.data ? (
+                <span className="muted small">{search.data.length} match{search.data.length === 1 ? "" : "es"}</span>
+              ) : null}
+            </div>
+
             {search.data && search.data.length === 0 && (
-              <div className="muted small">no matches</div>
+              <div className="muted small text-center py-2">No matching entities found</div>
             )}
+
             {search.data?.map((n) => {
               const ks = kindStyle(n.kind);
               return (

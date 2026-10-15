@@ -9,6 +9,7 @@ import { useAppStore } from "../store/useAppStore";
 import { kindStyle, ocsfClassName } from "../lib/kinds";
 import { fmtDuration, fmtTime } from "../lib/format";
 import type { NodeDetail } from "../api/types";
+import { CheckIcon, CopyIcon, CrosshairIcon, ExpandIcon, FocusIcon } from "./Icons";
 
 /** Best-effort host string for the host-scoped events query. */
 function hostFor(d: NodeDetail): string | null {
@@ -28,6 +29,7 @@ export default function DetailPanel() {
   const loadPath = useAppStore((s) => s.loadPath);
   const runAttackPaths = useAppStore((s) => s.runAttackPaths);
   const [pathSrc, setPathSrc] = useState<{ id: string; label: string } | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const detail = useQuery({
     queryKey: ["node", selectedId],
@@ -85,17 +87,30 @@ export default function DetailPanel() {
               <dt>last seen</dt>
               <dd>{fmtTime(d.validity.last_seen)}</dd>
               <dt>identity</dt>
-              <dd className="mono ellip" title={d.identity_key}>
-                {d.identity_key}
+              <dd className="identity-dd">
+                <span className="mono ellip" title={d.identity_key}>
+                  {d.identity_key}
+                </span>
+                <button
+                  className="copy-btn"
+                  onClick={() => {
+                    void navigator.clipboard.writeText(d.identity_key);
+                    setCopied(true);
+                    setTimeout(() => setCopied(false), 1500);
+                  }}
+                  title={copied ? "Copied to clipboard!" : "Copy identity key"}
+                >
+                  {copied ? <CheckIcon className="icon-xs text-success" /> : <CopyIcon className="icon-xs" />}
+                </button>
               </dd>
             </dl>
 
             <div className="btn-row">
               <button className="btn" onClick={() => void expand(selectedId)}>
-                Expand
+                <ExpandIcon className="icon-inline" /> Expand
               </button>
               <button className="btn" onClick={() => void pivotTo(selectedId)}>
-                Focus
+                <FocusIcon className="icon-inline" /> Focus
               </button>
               {pathSrc && pathSrc.id !== selectedId ? (
                 <>
@@ -111,7 +126,7 @@ export default function DetailPanel() {
                     onClick={() => void runAttackPaths(pathSrc.id, selectedId)}
                     title={`Ranked attack paths from ${pathSrc.label}`}
                   >
-                    ⚔ Attack path
+                    <CrosshairIcon className="icon-inline" /> Attack path
                   </button>
                 </>
               ) : (

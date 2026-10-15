@@ -34,7 +34,14 @@ plus a lock-free in-memory CSR index.
 
 ## Quick start
 
-Prerequisites: Rust (stable), Node.js 18+, Python 3.8+ (sample-data generator only).
+The fastest way to build, ingest sample data, and start LogHound is the all-in-one runner:
+
+```bash
+./run.sh
+# open http://127.0.0.1:8080/
+```
+
+Or step-by-step:
 
 ```bash
 # 1. Build the backend

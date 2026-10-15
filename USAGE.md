@@ -152,7 +152,7 @@ Point the proxy at a different API with `LOGHOUND_API=http://host:port npm run d
    any to pivot).
 4. **Views** (center tabs) — **Graph**, **Process Tree**, **Attack Path**.
 5. **Attack paths** — on a node, click *Mark path start*, select another node,
-   then **⚔ Attack path** to get ranked, time-respecting chains with MITRE
+   then **Attack path** to get ranked, time-respecting chains with MITRE
    technique tags.
 6. **Time rewind** — drag the bottom scrubber handles to re-render the graph
    as it existed in that window. All views share the window and selection.
