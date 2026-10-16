@@ -38,7 +38,7 @@ export default function AttackPathView() {
   if (!attackPaths) {
     return (
       <div className="view-empty muted">
-        Mark a start node in the detail panel, select a target, then run <b>⚔ Attack path</b>.
+        Mark a start node in the detail panel, select a target, then run <b>Attack path</b>.
       </div>
     );
   }

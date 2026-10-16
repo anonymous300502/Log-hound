@@ -4,11 +4,12 @@
 // element set is reconciled incrementally so selection and rewind don't reset
 // node positions unnecessarily.
 
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import cytoscape from "cytoscape";
 import { useAppStore } from "../store/useAppStore";
 import { buildStylesheet, layoutFor } from "../lib/cytoStyle";
 import type { NodeKind } from "../api/types";
+import { FitIcon, ZoomInIcon, ZoomOutIcon } from "./Icons";
 
 type Core = cytoscape.Core;
 type ElementDefinition = cytoscape.ElementDefinition;
@@ -51,6 +52,16 @@ export default function GraphView({ layoutName, fitSignal }: Props) {
     return [...nodeEls, ...edgeEls];
   }, [nodes, edges, hiddenKinds, hiddenEtypes]);
 
+  const [hoveredNode, setHoveredNode] = useState<{
+    id: string;
+    label: string;
+    kind: string;
+    risk: number;
+    events: number;
+    x: number;
+    y: number;
+  } | null>(null);
+
   // One-time init.
   useEffect(() => {
     if (!containerRef.current || cyRef.current) return;
@@ -86,6 +97,23 @@ export default function GraphView({ layoutName, fitSignal }: Props) {
     });
     cy.on("cxttap", "node", (evt) => void expand(evt.target.id()));
 
+    cy.on("mouseover", "node", (evt) => {
+      const node = evt.target;
+      const data = node.data();
+      const pos = node.renderedPosition();
+      setHoveredNode({
+        id: node.id(),
+        label: data.label || node.id(),
+        kind: data.kind || "entity",
+        risk: data.risk || 0,
+        events: data.event_count || 0,
+        x: pos.x,
+        y: pos.y,
+      });
+    });
+    cy.on("mouseout", "node", () => setHoveredNode(null));
+    cy.on("pan zoom", () => setHoveredNode(null));
+
     return () => {
       cy.destroy();
       cyRef.current = null;
@@ -120,7 +148,7 @@ export default function GraphView({ layoutName, fitSignal }: Props) {
     });
 
     if (structuralChange && cy.elements().length > 0) {
-      cy.layout(layoutFor(layoutName)).run();
+      cy.layout(layoutFor(layoutName, cy.nodes().length)).run();
     }
   }, [elements, layoutName]);
 
@@ -172,15 +200,76 @@ export default function GraphView({ layoutName, fitSignal }: Props) {
   return (
     <div className="graph-wrap">
       <div ref={containerRef} className="graph-canvas" />
+
+      {/* Floating Canvas Controls */}
+      <div className="canvas-floating-controls">
+        <button
+          className="canvas-ctl-btn"
+          onClick={() => {
+            if (cyRef.current) {
+              cyRef.current.zoom({
+                level: cyRef.current.zoom() * 1.3,
+                renderedPosition: { x: cyRef.current.width() / 2, y: cyRef.current.height() / 2 },
+              });
+            }
+          }}
+          title="Zoom in"
+        >
+          <ZoomInIcon className="icon-xs" />
+        </button>
+        <button
+          className="canvas-ctl-btn"
+          onClick={() => {
+            if (cyRef.current) {
+              cyRef.current.zoom({
+                level: cyRef.current.zoom() * 0.75,
+                renderedPosition: { x: cyRef.current.width() / 2, y: cyRef.current.height() / 2 },
+              });
+            }
+          }}
+          title="Zoom out"
+        >
+          <ZoomOutIcon className="icon-xs" />
+        </button>
+        <button
+          className="canvas-ctl-btn"
+          onClick={() => {
+            if (cyRef.current) cyRef.current.fit(undefined, 35);
+          }}
+          title="Fit view to graph"
+        >
+          <FitIcon className="icon-xs" />
+        </button>
+      </div>
+
+      {/* Hover Node Tooltip Card */}
+      {hoveredNode && (
+        <div
+          className="node-hover-card"
+          style={{
+            left: `${hoveredNode.x + 14}px`,
+            top: `${hoveredNode.y - 12}px`,
+          }}
+        >
+          <div className="hover-card-title">{hoveredNode.label}</div>
+          <div className="hover-card-meta">
+            <span className="hover-kind-pill">{hoveredNode.kind}</span>
+            <span className="hover-stat">risk: {hoveredNode.risk.toFixed(0)}</span>
+            <span className="hover-stat">{hoveredNode.events} events</span>
+          </div>
+          <div className="hover-hint">Double-click or right-click to expand</div>
+        </div>
+      )}
+
       {isEmpty && (
         <div className="canvas-hint">
-          <div className="canvas-hint-title">Nothing on the canvas yet</div>
+          <div className="canvas-hint-title">Investigation Graph Canvas</div>
           <div className="muted small">
-            Search an entity on the left and click a result, or load the
-            highest-risk entities to start.
+            Search an entity on the left rail to pivot, or load an initial entity
+            to explore connected processes, sessions, and sockets.
           </div>
           <button className="btn accent" onClick={() => void loadOverview()}>
-            Load overview
+            Load Overview
           </button>
         </div>
       )}

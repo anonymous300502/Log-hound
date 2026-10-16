@@ -164,16 +164,18 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   loadOverview: async () => {
-    // Seed the graph with the highest-risk entities (alerts and whom they hit)
-    // so first-run isn't a blank canvas.
+    // Seed the graph with the highest-risk entities so first-run isn't a blank canvas,
+    // while keeping node count responsive and fast.
     set({ loading: true, error: null });
     try {
-      const top = await api.topRisk(8);
+      const top = await api.topRisk(10);
       if (top.length === 0) {
         set({ loading: false });
         return;
       }
-      set({ seeds: top.map((t) => t.id), selectedId: top[0].id });
+      const highRisk = top.filter((t) => (t.risk ?? t.score ?? 0) > 0);
+      const targetSeeds = highRisk.length > 0 ? highRisk.slice(0, 2).map((t) => t.id) : [top[0].id];
+      set({ seeds: targetSeeds, selectedId: targetSeeds[0] });
       await get().refresh();
     } catch (err) {
       set({ loading: false, error: describe(err) });

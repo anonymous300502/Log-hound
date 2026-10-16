@@ -3,7 +3,7 @@
 // context, and exposes two handles [from, to]. Moving them re-queries the graph
 // with the window applied, so the canvas shows the environment as it was then.
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { api } from "../api/client";
 import { useAppStore } from "../store/useAppStore";
@@ -14,35 +14,52 @@ export default function TimeScrubber() {
   const nodes = useAppStore((s) => s.nodes);
   const window = useAppStore((s) => s.window);
   const setWindow = useAppStore((s) => s.setWindow);
+  const dataRange = useAppStore((s) => s.dataRange);
+  const setDataRange = useAppStore((s) => s.setDataRange);
 
-  // Temporal extent of the currently-loaded graph.
-  const range = useMemo(() => {
+  // Establish baseline data range. Once computed from full graph, keep it stable
+  // so that applying a temporal window filter doesn't collapse the track slider.
+  useEffect(() => {
     let lo = Number.POSITIVE_INFINITY;
     let hi = Number.NEGATIVE_INFINITY;
     for (const n of Object.values(nodes)) {
       if (n.first_seen < lo) lo = n.first_seen;
       if (n.last_seen > hi) hi = n.last_seen;
     }
-    if (!Number.isFinite(lo) || !Number.isFinite(hi) || hi <= lo) return null;
-    // Pad by 1% so the endpoints aren't flush against the track.
+    if (!Number.isFinite(lo) || !Number.isFinite(hi) || hi <= lo) return;
     const pad = Math.max(1000, Math.round((hi - lo) * 0.01));
-    return { from: lo - pad, to: hi + pad };
-  }, [nodes]);
+    const calculated = { from: lo - pad, to: hi + pad };
+
+    if (!dataRange) {
+      setDataRange(calculated);
+    } else if (window === null) {
+      if (calculated.from < dataRange.from || calculated.to > dataRange.to) {
+        setDataRange({
+          from: Math.min(dataRange.from, calculated.from),
+          to: Math.max(dataRange.to, calculated.to),
+        });
+      }
+    }
+  }, [nodes, dataRange, window, setDataRange]);
+
+  const range = dataRange;
 
   // Local handle positions (committed to the store after debounce).
   const [from, setFrom] = useState<number | null>(null);
   const [to, setTo] = useState<number | null>(null);
 
-  // Initialize / reset handles when the range appears or changes.
+  // Initialize handles when range appears or when reset to all time
   useEffect(() => {
     if (!range) {
       setFrom(null);
       setTo(null);
       return;
     }
-    setFrom((f) => (f == null || f < range.from || f > range.to ? range.from : f));
-    setTo((t) => (t == null || t > range.to || t < range.from ? range.to : t));
-  }, [range]);
+    if (window === null) {
+      setFrom(range.from);
+      setTo(range.to);
+    }
+  }, [range, window]);
 
   const debFrom = useDebounce(from, 200);
   const debTo = useDebounce(to, 200);
@@ -55,11 +72,10 @@ export default function TimeScrubber() {
       if (window !== null) void setWindow(null);
       return;
     }
-    if (!window || window.from !== debFrom || window.to !== debTo) {
+    if (!window || Math.abs(window.from - debFrom) > 50 || Math.abs(window.to - debTo) > 50) {
       void setWindow({ from: debFrom, to: debTo });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [debFrom, debTo]);
+  }, [debFrom, debTo, range, window, setWindow]);
 
   const bucket = range ? Math.max(1000, Math.floor((range.to - range.from) / 60)) : 1000;
   const histogram = useQuery({
@@ -80,6 +96,23 @@ export default function TimeScrubber() {
   const pct = (t: number) => ((t - range.from) / span) * 100;
   const maxCount = Math.max(1, ...(histogram.data?.map((b) => b.count) ?? [1]));
 
+  const setPreset = (fraction: "first" | "second" | "all") => {
+    if (!range) return;
+    if (fraction === "all") {
+      setFrom(range.from);
+      setTo(range.to);
+      void setWindow(null);
+    } else if (fraction === "first") {
+      const mid = range.from + Math.floor((range.to - range.from) / 2);
+      setFrom(range.from);
+      setTo(mid);
+    } else if (fraction === "second") {
+      const mid = range.from + Math.floor((range.to - range.from) / 2);
+      setFrom(mid);
+      setTo(range.to);
+    }
+  };
+
   return (
     <footer className="scrubber">
       <div className="scrubber-head">
@@ -87,9 +120,17 @@ export default function TimeScrubber() {
         <span className="scrubber-window muted small">
           {from != null && to != null ? `${fmtTime(from)} → ${fmtTime(to)}` : "—"}
         </span>
-        <button className="btn tiny" onClick={() => void setWindow(null)} disabled={!window}>
-          All time
-        </button>
+        <div className="scrubber-presets">
+          <button className="btn tiny" onClick={() => setPreset("first")}>
+            1st Half
+          </button>
+          <button className="btn tiny" onClick={() => setPreset("second")}>
+            2nd Half
+          </button>
+          <button className="btn tiny" onClick={() => setPreset("all")} disabled={!window}>
+            All time
+          </button>
+        </div>
       </div>
 
       <div className="track-wrap">

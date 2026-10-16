@@ -20,7 +20,7 @@ The investigation UI for LogHound — a temporal knowledge-graph explorer built 
   time-respecting route with MITRE tags).
 - **Risk overlay**: node size scales with the composite risk score
   (PageRank + alert-proximity); alerts render as red stars.
-- **Attack paths**: mark a start node, select a target, run **⚔ Attack path** to
+- **Attack paths**: mark a start node, select a target, run **Attack path** to
   get ranked, time-respecting chains (cost + technique + MITRE); click a rank to
   highlight it on the graph and open it in the Attack Path view.
 - **Time rewind**: the bottom scrubber spans the loaded graph's temporal extent
